@@ -839,7 +839,6 @@ with st.container(border=True):
             st.metric(
                 "All Time Average",
                 f"{(all_time_avg / 60):.1f} min/day",
-                f"{((all_time_avg - avg_seconds_per_day) / 60):+.1f} vs overall",
             )
 
 with st.container(border=True):
