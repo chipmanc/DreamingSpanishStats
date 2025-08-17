@@ -226,7 +226,7 @@ def get_best_days(analysis_result: AnalysisResult, num_days: int = 5) -> list[di
     for _, row in best_days_df.iterrows():
         best_days_list.append(
             {
-                "date": row["date"].strftime("%Y-%m-%d"),
+                "date": row["date"].strftime("%b %d, %Y"),
                 "timeSeconds": int(row["timeSeconds"]),  # Ensure integer for display
             },
         )
