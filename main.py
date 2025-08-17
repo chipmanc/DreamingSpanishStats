@@ -345,45 +345,15 @@ with st.container(border=True):
     st.subheader("Additional Graphs")
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
         [
-            "Daily Breakdown",
             "Moving Averages",
-            "Yearly Heatmap",
+            "Daily Breakdown",
             "Monthly Breakdown",
+            "Yearly Heatmap",
             "Days of Week",
         ],
     )
 
     with tab1:
-        # Daily breakdown
-        daily_fig = go.Figure()
-
-        daily_fig.add_trace(
-            go.Bar(
-                x=df["date"],
-                y=df["seconds"] / 60,  # Convert to minutes
-                name="Daily Minutes",
-            ),
-        )
-
-        daily_fig.add_trace(
-            go.Scatter(
-                x=df["date"],
-                y=[avg_seconds_per_day / 60] * len(df),  # Convert to minutes
-                name="Overall Average",
-                line={"color": COLOUR_PALETTE["primary"], "dash": "dash"},
-            ),
-        )
-
-        daily_fig.update_layout(
-            title="Daily Minutes Watched",
-            xaxis_title="Date",
-            yaxis_title="Minutes",
-        )
-
-        daily_fig.update_yaxes(dtick=15, title="Minutes Watched", ticklabelstep=2)
-        st.plotly_chart(daily_fig, use_container_width=True)
-
-    with tab2:
         # Moving averages visualization
         moving_avg_fig = go.Figure()
 
@@ -438,7 +408,109 @@ with st.container(border=True):
 
         st.plotly_chart(moving_avg_fig, use_container_width=True)
 
+    with tab2:
+        # Daily breakdown
+        daily_fig = go.Figure()
+
+        daily_fig.add_trace(
+            go.Bar(
+                x=df["date"],
+                y=df["seconds"] / 60,  # Convert to minutes
+                name="Daily Minutes",
+            ),
+        )
+
+        daily_fig.add_trace(
+            go.Scatter(
+                x=df["date"],
+                y=[avg_seconds_per_day / 60] * len(df),  # Convert to minutes
+                name="Overall Average",
+                line={"color": COLOUR_PALETTE["primary"], "dash": "dash"},
+            ),
+        )
+
+        daily_fig.update_layout(
+            title="Daily Minutes Watched",
+            xaxis_title="Date",
+            yaxis_title="Minutes",
+        )
+
+        daily_fig.update_yaxes(dtick=15, title="Minutes Watched", ticklabelstep=2)
+        st.plotly_chart(daily_fig, use_container_width=True)
+
     with tab3:
+        # Monthly breakdown
+        df["month_year"] = df["date"].dt.to_period("M")
+
+        last_12_months = sorted(df["month_year"].unique(), reverse=True)[:12][::-1]
+
+        monthly_data = []
+        today = datetime.now(tz=UTC).date()
+
+        for month_period in last_12_months:
+            month_df = df[df["month_year"] == month_period]
+
+            days_practiced = month_df[month_df["seconds"] > 0]["date"].nunique()
+            days_target_met = month_df["goalReached"].sum()
+
+            if month_period.year == today.year and month_period.month == today.month:
+                days_in_month = month_df["date"].nunique()
+            else:
+                days_in_month = month_period.days_in_month
+
+            monthly_data.append(
+                {
+                    "month": month_period.strftime("%Y-%m"),
+                    "days_practiced": days_practiced,
+                    "days_target_met": days_target_met,
+                    "days_in_month": days_in_month,
+                },
+            )
+
+        monthly_df = pd.DataFrame(monthly_data)
+
+        # Create grouped bar chart
+        monthly_fig = go.Figure()
+
+        monthly_fig.add_trace(
+            go.Bar(
+                x=monthly_df["month"],
+                y=monthly_df["days_target_met"],
+                name="Days Target Met",
+                marker_color=COLOUR_PALETTE["7day_avg"],
+            ),
+        )
+
+        monthly_fig.add_trace(
+            go.Bar(
+                x=monthly_df["month"],
+                y=monthly_df["days_practiced"],
+                name="Days Practiced (> 0 mins)",
+                marker_color=COLOUR_PALETTE["primary"],
+            ),
+        )
+
+        monthly_fig.add_trace(
+            go.Bar(
+                x=monthly_df["month"],
+                y=monthly_df["days_in_month"],
+                name="Tracked Days in Month",
+                marker_color=COLOUR_PALETTE["30day_avg"],
+            ),
+        )
+
+        monthly_fig.update_layout(
+            barmode="group",
+            title="Monthly Breakdown of Practice and Goals",
+            xaxis_title="Month",
+            yaxis_title="Number of Days",
+            height=500,
+            legend_title="Metric",
+        )
+
+        st.plotly_chart(monthly_fig, use_container_width=True)
+
+    with tab4:
         # Create a complete year date range
         today = pd.Timestamp.now()
         year_start = pd.Timestamp(today.year, 1, 1)
@@ -514,78 +586,6 @@ with st.container(border=True):
         )
 
         st.plotly_chart(heatmap_fig, use_container_width=True)
-
-    with tab4:
-        # Monthly breakdown
-        df["month_year"] = df["date"].dt.to_period("M")
-
-        last_12_months = sorted(df["month_year"].unique(), reverse=True)[:12][::-1]
-
-        monthly_data = []
-        today = datetime.now(tz=UTC).date()
-
-        for month_period in last_12_months:
-            month_df = df[df["month_year"] == month_period]
-
-            days_practiced = month_df[month_df["seconds"] > 0]["date"].nunique()
-            days_target_met = month_df["goalReached"].sum()
-
-            if month_period.year == today.year and month_period.month == today.month:
-                days_in_month = month_df["date"].nunique()
-            else:
-                days_in_month = month_period.days_in_month
-
-            monthly_data.append(
-                {
-                    "month": month_period.strftime("%Y-%m"),
-                    "days_practiced": days_practiced,
-                    "days_target_met": days_target_met,
-                    "days_in_month": days_in_month,
-                },
-            )
-
-        monthly_df = pd.DataFrame(monthly_data)
-
-        # Create grouped bar chart
-        monthly_fig = go.Figure()
-
-        monthly_fig.add_trace(
-            go.Bar(
-                x=monthly_df["month"],
-                y=monthly_df["days_target_met"],
-                name="Days Target Met",
-                marker_color=COLOUR_PALETTE["7day_avg"],
-            ),
-        )
-
-        monthly_fig.add_trace(
-            go.Bar(
-                x=monthly_df["month"],
-                y=monthly_df["days_practiced"],
-                name="Days Practiced (> 0 mins)",
-                marker_color=COLOUR_PALETTE["primary"],
-            ),
-        )
-
-        monthly_fig.add_trace(
-            go.Bar(
-                x=monthly_df["month"],
-                y=monthly_df["days_in_month"],
-                name="Tracked Days in Month",
-                marker_color=COLOUR_PALETTE["30day_avg"],
-            ),
-        )
-
-        monthly_fig.update_layout(
-            barmode="group",
-            title="Monthly Breakdown of Practice and Goals",
-            xaxis_title="Month",
-            yaxis_title="Number of Days",
-            height=500,
-            legend_title="Metric",
-        )
-
-        st.plotly_chart(monthly_fig, use_container_width=True)
 
     with tab5:
         # Days of week breakdown
