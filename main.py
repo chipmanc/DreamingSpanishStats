@@ -147,7 +147,6 @@ current_streak = df["current_streak"].iloc[-1] if df["streak"].iloc[-1] == 1 els
 
 # Calculate all-time longest streak
 streak_lengths = df[df["streak"] == 1].groupby("streak_group").size()
-longest_streak = streak_lengths.max() if not streak_lengths.empty else 0
 
 # Calculate moving averages
 df["7day_avg"] = df["seconds"].rolling(7, min_periods=1).mean()
@@ -161,6 +160,13 @@ with st.container(border=True):
     # Current stats
     col1, col2, col3, col4 = st.columns(4)
     with col1:
+        today = datetime.now(tz=UTC).date()
+        today_df = df[df["date"].dt.date == today]
+        minutes_watched_today = today_df["seconds"].sum() / 60
+        st.metric("Minutes Watched Today", f"{minutes_watched_today:.1f}")
+    with col2:
+        st.metric("Current Streak", f"{current_streak} days")
+    with col3:
         if initial_time > 0:
             st.metric(
                 "Total Hours Watched",
@@ -169,12 +175,8 @@ with st.container(border=True):
             )
         else:
             st.metric("Total Hours Watched", f"{df['cumulative_hours'].iloc[-1]:.1f}")
-    with col2:
-        st.metric("Average Minutes/Day", f"{(avg_seconds_per_day / 60):.1f}")
-    with col3:
-        st.metric("Current Streak", f"{current_streak} days")
     with col4:
-        st.metric("Longest Streak", f"{longest_streak} days")
+        st.metric("Average Minutes/Day", f"{(avg_seconds_per_day / 60):.1f}")
 
 
 with st.container(border=True):
@@ -703,13 +705,8 @@ with general_insights:  # noqa: SIM117
 
         with col1:
             # Best day stats
-            best_day_idx = df["seconds"].idxmax()
-            best_day = df.loc[best_day_idx]
-            st.metric(
-                "Best Day",
-                f"{(best_day['seconds'] / 60):.0f} min",
-                f"{best_day['date'].strftime('%a %b %d')}",
-            )
+            longest_streak = streak_lengths.max() if not streak_lengths.empty else 0
+            st.metric("Longest Streak", f"{longest_streak} days")
             # Add consistency metric
             days_watched = (df["seconds"] > 0).sum()
             consistency = (days_watched / len(df)) * 100
