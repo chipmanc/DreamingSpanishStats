@@ -17,8 +17,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from src import constants
+from src.components import basic_stats, projected_growth
 from src.utils import (
-    generate_future_predictions,
     get_best_days,
     get_initial_time,
     load_data,
@@ -26,21 +27,6 @@ from src.utils import (
 
 # Set pandas option for future compatibility
 pd.set_option("future.no_silent_downcasting", True)  # noqa: FBT003
-
-UPCOMING_MILESTONES_CAP = 3
-MILESTONES = [50, 150, 300, 600, 1000, 1500]
-COLOUR_PALETTE = {
-    "primary": "#2E86C1",  # Primary blue
-    "7day_avg": "#FFA500",  # Orange
-    "30day_avg": "#2ECC71",  # Green
-    # Milestone colors - using an accessible and distinguishable gradient
-    "50": "#FF6B6B",  # Coral red
-    "150": "#4ECDC4",  # Turquoise
-    "300": "#9B59B6",  # Purple
-    "600": "#F1C40F",  # Yellow
-    "1000": "#E67E22",  # Orange
-    "1500": "#2ECC71",  # Green
-}
 
 st.set_page_config(page_title="Dreaming Spanish Time Tracker", layout="wide")
 
@@ -152,196 +138,14 @@ streak_lengths = df[df["streak"] == 1].groupby("streak_group").size()
 df["7day_avg"] = df["seconds"].rolling(7, min_periods=1).mean()
 df["30day_avg"] = df["seconds"].rolling(30, min_periods=1).mean()
 
+current_7day_avg = df["7day_avg"].iloc[-1]
+current_30day_avg = df["30day_avg"].iloc[-1]
+
 avg_seconds_per_day = df["seconds"].mean()
 
-with st.container(border=True):
-    st.subheader("Basic Stats")
+basic_stats.basic_stats(df, initial_time)
 
-    # Current stats
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        today = datetime.now(tz=UTC).date()
-        today_df = df[df["date"].dt.date == today]
-        minutes_watched_today = today_df["seconds"].sum() / 60
-        st.metric("Minutes Watched Today", f"{minutes_watched_today:.1f}")
-    with col2:
-        st.metric("Current Streak", f"{current_streak} days")
-    with col3:
-        if initial_time > 0:
-            st.metric(
-                "Total Hours Watched",
-                f"{df['cumulative_hours'].iloc[-1]:.1f}",
-                f"including {initial_time / 60:.0f} min initial time",
-            )
-        else:
-            st.metric("Total Hours Watched", f"{df['cumulative_hours'].iloc[-1]:.1f}")
-    with col4:
-        st.metric("Average Minutes/Day", f"{(avg_seconds_per_day / 60):.1f}")
-
-
-with st.container(border=True):
-    st.subheader("Projected Growth")
-
-    # Calculate target milestone
-    current_hours = df["cumulative_hours"].iloc[-1]
-    upcoming_milestones = [m for m in MILESTONES if m > current_hours][:3]
-    target_milestone = (
-        upcoming_milestones[2]
-        if len(upcoming_milestones) >= UPCOMING_MILESTONES_CAP
-        else MILESTONES[-1]
-    )
-
-    # Calculate current moving averages for predictions
-    current_7day_avg = df["7day_avg"].iloc[-1]
-    current_30day_avg = df["30day_avg"].iloc[-1]
-
-    # Generate predictions up to target milestone
-    predicted_df = generate_future_predictions(
-        df,
-        avg_seconds_per_day,
-        target_milestone,
-    )
-    predicted_df_7day = generate_future_predictions(
-        df,
-        current_7day_avg,
-        target_milestone,
-    )
-    predicted_df_30day = generate_future_predictions(
-        df,
-        current_30day_avg,
-        target_milestone,
-    )
-
-    # Create milestone prediction visualization
-    fig_prediction = go.Figure()
-
-    # Add historical data
-    fig_prediction.add_trace(
-        go.Scatter(
-            x=df["date"],
-            y=df["cumulative_hours"],
-            name="Historical Data",
-            line={"color": COLOUR_PALETTE["primary"]},
-            mode="lines+markers",
-        ),
-    )
-
-    # Add predicted data - Overall Average
-    fig_prediction.add_trace(
-        go.Scatter(
-            x=predicted_df["date"],
-            y=predicted_df["cumulative_hours"],
-            name="Predicted (Overall Avg)",
-            line={"color": f"{COLOUR_PALETTE['primary']}", "dash": "dash"},
-            mode="lines",
-            opacity=0.5,
-        ),
-    )
-
-    # Add predicted data - 7-Day Average
-    fig_prediction.add_trace(
-        go.Scatter(
-            x=predicted_df_7day["date"],
-            y=predicted_df_7day["cumulative_hours"],
-            name="Predicted (7-Day Avg)",
-            line={"color": COLOUR_PALETTE["7day_avg"], "dash": "dot"},
-            mode="lines",
-            opacity=0.5,
-        ),
-    )
-
-    # Add predicted data - 30-Day Average
-    fig_prediction.add_trace(
-        go.Scatter(
-            x=predicted_df_30day["date"],
-            y=predicted_df_30day["cumulative_hours"],
-            name="Predicted (30-Day Avg)",
-            line={"color": COLOUR_PALETTE["30day_avg"], "dash": "dot"},
-            mode="lines",
-            opacity=0.5,
-        ),
-    )
-
-    for milestone in MILESTONES:
-        color = COLOUR_PALETTE[str(milestone)]
-        if milestone <= df["cumulative_hours"].max():
-            milestone_date = df[df["cumulative_hours"] >= milestone]["date"].iloc[0]
-        elif milestone <= predicted_df["cumulative_hours"].max():
-            milestone_date = predicted_df[
-                predicted_df["cumulative_hours"] >= milestone
-            ]["date"].iloc[0]
-        else:
-            continue
-
-        fig_prediction.add_shape(
-            type="line",
-            x0=df["date"].min(),
-            x1=milestone_date,
-            y0=milestone,
-            y1=milestone,
-            line={"color": color, "dash": "dash", "width": 1},
-        )
-
-        fig_prediction.add_annotation(
-            x=df["date"].min(),
-            y=milestone,
-            text=f"{milestone} Hours",
-            showarrow=False,
-            xshift=-5,
-            xanchor="right",
-            font={"color": color},
-        )
-
-        fig_prediction.add_annotation(
-            x=milestone_date,
-            y=milestone,
-            text=milestone_date.strftime("%Y-%m-%d"),
-            showarrow=True,
-            arrowhead=2,
-            arrowsize=1,
-            arrowcolor=color,
-            font={"color": color, "size": 10},
-            xanchor="left",
-            yanchor="bottom",
-        )
-
-    # Find the next 3 upcoming milestones and their dates
-    current_hours = df["cumulative_hours"].iloc[-1]
-    upcoming_milestones = [m for m in MILESTONES if m > current_hours][:3]
-    y_axis_max = (
-        upcoming_milestones[2]
-        if len(upcoming_milestones) >= UPCOMING_MILESTONES_CAP
-        else MILESTONES[-1]
-    )
-
-    # Get the date for the third upcoming milestone (or last milestone if < 3 remain)
-    if len(upcoming_milestones) > 0:
-        target_milestone = upcoming_milestones[min(2, len(upcoming_milestones) - 1)]
-        milestone_data = predicted_df[
-            predicted_df["cumulative_hours"] >= target_milestone
-        ]
-        if len(milestone_data) > 0:
-            x_axis_max_date = milestone_data["date"].iloc[0]
-        else:
-            x_axis_max_date = predicted_df["date"].max()
-    else:
-        x_axis_max_date = predicted_df["date"].max()
-
-    fig_prediction.update_layout(
-        xaxis_title="Date",
-        yaxis_title="Cumulative Hours",
-        showlegend=True,
-        height=600,
-        margin={"l": 20, "r": 20, "t": 10, "b": 0},
-        yaxis={
-            "autorange": True,
-        },
-        xaxis={
-            "autorange": True,
-        },
-    )
-
-    st.plotly_chart(fig_prediction, use_container_width=True)
+projected_growth.projected_growth(df)
 
 with st.container(border=True):
     st.subheader("Additional Graphs")
@@ -377,7 +181,7 @@ with st.container(border=True):
                 x=df["date"],
                 y=df["7day_avg"] / 60,
                 name="7-day Average",
-                line={"color": COLOUR_PALETTE["7day_avg"]},
+                line={"color": constants.COLOUR_PALETTE["7day_avg"]},
             ),
         )
 
@@ -386,7 +190,7 @@ with st.container(border=True):
                 x=df["date"],
                 y=df["30day_avg"] / 60,
                 name="30-day Average",
-                line={"color": COLOUR_PALETTE["30day_avg"]},
+                line={"color": constants.COLOUR_PALETTE["30day_avg"]},
             ),
         )
 
@@ -395,7 +199,7 @@ with st.container(border=True):
                 x=df["date"],
                 y=df["cumulative_avg"] / 60,
                 name="Overall Average",
-                line={"color": COLOUR_PALETTE["primary"], "dash": "dash"},
+                line={"color": constants.COLOUR_PALETTE["primary"], "dash": "dash"},
             ),
         )
 
@@ -427,7 +231,7 @@ with st.container(border=True):
                 x=df["date"],
                 y=[avg_seconds_per_day / 60] * len(df),  # Convert to minutes
                 name="Overall Average",
-                line={"color": COLOUR_PALETTE["primary"], "dash": "dash"},
+                line={"color": constants.COLOUR_PALETTE["primary"], "dash": "dash"},
             ),
         )
 
@@ -479,7 +283,7 @@ with st.container(border=True):
                 x=monthly_df["month"],
                 y=monthly_df["days_target_met"],
                 name="Days Target Met",
-                marker_color=COLOUR_PALETTE["7day_avg"],
+                marker_color=constants.COLOUR_PALETTE["7day_avg"],
             ),
         )
 
@@ -488,7 +292,7 @@ with st.container(border=True):
                 x=monthly_df["month"],
                 y=monthly_df["days_practiced"],
                 name="Days Practiced (> 0 mins)",
-                marker_color=COLOUR_PALETTE["primary"],
+                marker_color=constants.COLOUR_PALETTE["primary"],
             ),
         )
 
@@ -497,7 +301,7 @@ with st.container(border=True):
                 x=monthly_df["month"],
                 y=monthly_df["days_in_month"],
                 name="Tracked Days in Month",
-                marker_color=COLOUR_PALETTE["30day_avg"],
+                marker_color=constants.COLOUR_PALETTE["30day_avg"],
             ),
         )
 
@@ -616,7 +420,7 @@ with st.container(border=True):
             y="minutes",
             title="Average Minutes Watched per Day of Week",
             labels={"day_of_week": "Day of Week", "minutes": "Average Minutes Watched"},
-            color_discrete_sequence=[COLOUR_PALETTE["primary"]],
+            color_discrete_sequence=[constants.COLOUR_PALETTE["primary"]],
         )
 
         days_of_week_fig.update_layout(xaxis_title="Day of Week", yaxis_title="Minutes")
@@ -640,7 +444,7 @@ with st.container(border=True):
         with header_cols[3]:
             st.write("**30-day avg**")
 
-        for milestone in MILESTONES:
+        for milestone in constants.MILESTONES:
             if current_hours < milestone:
                 days_to_milestone = (
                     (milestone - current_hours) * 3600
@@ -691,7 +495,7 @@ with st.container(border=True):
 
     with col2:
         st.subheader("Progress Overview")
-        for milestone in MILESTONES:
+        for milestone in constants.MILESTONES:
             if current_hours < milestone:
                 percentage = (current_hours / milestone) * 100
                 st.write(f"Progress to {milestone} hours: {percentage:.1f}%")
@@ -822,7 +626,7 @@ with st.container(border=True):
             # Time comparisons
             all_time_total = df["seconds"].sum()
             milestone_count = sum(
-                m <= df["cumulative_hours"].iloc[-1] for m in MILESTONES
+                m <= df["cumulative_hours"].iloc[-1] for m in constants.MILESTONES
             )
             st.metric(
                 "All Time Total",
