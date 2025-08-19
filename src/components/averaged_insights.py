@@ -30,7 +30,6 @@ def averaged_insights(df: DataFrame) -> None:
             col1, col2 = st.columns(2)
 
             with col1:
-                # Time comparisons
                 last_7_total = df.tail(7)["seconds"].sum()
                 previous_7_total = (
                     df.iloc[-14:-7]["seconds"].sum() if len(df) >= 14 else 0  # noqa: PLR2004
@@ -54,7 +53,6 @@ def averaged_insights(df: DataFrame) -> None:
             col1, col2 = st.columns(2)
 
             with col1:
-                # Time comparisons
                 last_30_total = df.tail(30)["seconds"].sum()
                 previous_30_total = (
                     df.iloc[-60:-30]["seconds"].sum() if len(df) >= 60 else 0  # noqa: PLR2004
@@ -78,7 +76,6 @@ def averaged_insights(df: DataFrame) -> None:
             col1, col2 = st.columns(2)
 
             with col1:
-                # Time comparisons
                 all_time_total = df["seconds"].sum()
                 milestone_count = sum(
                     m <= df["cumulative_hours"].iloc[-1] for m in constants.MILESTONES
