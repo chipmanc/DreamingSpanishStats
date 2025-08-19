@@ -15,11 +15,11 @@ def best_days(result: AnalysisResult) -> None:
     """
     with st.container(border=True):
         st.subheader("Best Days")
-        best_days = get_best_days(result, num_days=5)
-        if not best_days:
+        best_days_list = get_best_days(result)
+        if not best_days_list:
             st.write("Not enough data to show top 5 days.")
         else:
-            for day in best_days:
+            for day in best_days_list:
                 hours, remainder = divmod(day["timeSeconds"], 3600)
                 minutes, seconds = divmod(remainder, 60)
                 time_str = (

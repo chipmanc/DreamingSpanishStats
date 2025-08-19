@@ -141,7 +141,7 @@ with general_insights_col:
     components.general_insights(df, result)
 
 with best_days_col:
-    components.best_days(df, result)
+    components.best_days(result)
 
 components.averaged_insights(df)
 
