@@ -31,6 +31,6 @@ def progress_bar(df: DataFrame, user_info: UserInfo) -> None:
         )
 
         st.progress(
-            progress_val,
+            min(progress_val, 1.0),
             text=status_text,
         )
