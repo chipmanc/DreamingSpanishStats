@@ -86,7 +86,7 @@ def get_user_info(token: str) -> UserInfo | None:
 
     except Exception as e:  # noqa: BLE001
         st.error(f"Error fetching profile data: {e!s}")
-        return None
+        return UserInfo(daily_goal_seconds=0)
 
 
 def load_data(token: str) -> AnalysisResult | None:
