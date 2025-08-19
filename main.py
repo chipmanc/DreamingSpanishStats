@@ -17,6 +17,7 @@ import streamlit as st
 from src import components
 from src.utils import (
     get_initial_time,
+    get_user_info,
     load_data,
 )
 
@@ -108,6 +109,7 @@ if "data" not in st.session_state or go_button:
 result = st.session_state.data
 df = result.df
 initial_time = get_initial_time(token) or 0
+user_info = get_user_info(token) or 0
 
 df = result.df.rename(columns={"timeSeconds": "seconds"})
 
@@ -127,6 +129,8 @@ df["30day_avg"] = df["seconds"].rolling(30, min_periods=1).mean()
 
 current_7day_avg = df["7day_avg"].iloc[-1]
 current_30day_avg = df["30day_avg"].iloc[-1]
+
+components.progress_bar(df, user_info)
 
 components.basic_stats(df, initial_time)
 

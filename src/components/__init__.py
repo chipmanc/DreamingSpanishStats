@@ -5,6 +5,7 @@ from .basic_stats import basic_stats
 from .best_days import best_days
 from .expected_milestones import expected_milestones
 from .general_insights import general_insights
+from .progress_bar import progress_bar
 from .projected_growth import projected_growth
 
 __all__ = [
@@ -14,5 +15,6 @@ __all__ = [
     "best_days",
     "expected_milestones",
     "general_insights",
+    "progress_bar",
     "projected_growth",
 ]

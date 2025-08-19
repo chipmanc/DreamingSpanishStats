@@ -10,7 +10,7 @@ import httpx
 import pandas as pd
 import streamlit as st
 
-from src.model import AnalysisResult
+from src.model import AnalysisResult, UserInfo
 
 
 def fetch_ds_data(token: str) -> dict | None:
@@ -61,6 +61,31 @@ def get_initial_time(token: str) -> int | None:
         return response.json()["externalTimes"][0]["timeSeconds"]
     except Exception as e:  # noqa: BLE001
         st.error(f"Error fetching initial time: {e!s}")
+        return None
+
+
+def get_user_info(token: str) -> UserInfo | None:
+    """Fetch the user info from the Dreaming Spanish API.
+
+    This function uses the API call to fetch information about the user.
+    This information includes things like the daily goal, profile info,
+    and a few hidden flags.
+
+    Args:
+        token (str): The bearer token for API authentication
+
+    """
+    url = "https://www.dreamingspanish.com/.netlify/functions/user"
+    headers = {"Authorization": f"Bearer {token}"}
+
+    try:
+        response = httpx.get(url, headers=headers)
+        response.raise_for_status()
+
+        return UserInfo(daily_goal_seconds=response.json()["user"]["dailyGoalSeconds"])
+
+    except Exception as e:  # noqa: BLE001
+        st.error(f"Error fetching profile data: {e!s}")
         return None
 
 

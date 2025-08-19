@@ -10,6 +10,19 @@ from dataclasses import dataclass
 import pandas as pd
 
 
+@dataclass
+class UserInfo:
+    """Represents the info returned about a user from the DS app.
+
+    Attributes:
+        daily_goal_seconds (int): The current daily goal of the user in seconds
+
+    """
+
+    daily_goal_seconds: int
+    # todo(hpeach): more could be added - i.e. profile picture, beta status ...
+
+
 # todo(hpeach): This may no longer need to be its own dataclass, and could be calculated
 # in components?
 @dataclass
