@@ -3,7 +3,7 @@
 import streamlit as st
 from pandas import DataFrame
 
-from model import AnalysisResult
+from src.model import AnalysisResult
 
 
 def general_insights(df: DataFrame, result: AnalysisResult) -> None:
