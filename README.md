@@ -37,7 +37,7 @@ If you use VS Code then you can also use the provided [Dev Container](https://co
 
 ## Contributing
 
-To contribute some changes, fork from the `dev` branch (the most recent) and make a pull request!
+To contribute some changes, fork from the `main` branch (the most recent) and make a pull request!
 
 ## License
 
