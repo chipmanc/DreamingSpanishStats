@@ -10,6 +10,8 @@ from dataclasses import dataclass
 import pandas as pd
 
 
+# todo(hpeach): This may no longer need to be its own dataclass, and could be calculated
+# in components?
 @dataclass
 class AnalysisResult:
     """Represent the result of data analysis for the Dreaming Spanish application.

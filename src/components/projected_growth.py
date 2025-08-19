@@ -16,6 +16,7 @@ def projected_growth(df: DataFrame) -> None:
 
     """
     avg_seconds_per_day = df["seconds"].mean()
+
     with st.container(border=True):
         st.subheader("Projected Growth")
 
