@@ -1,5 +1,6 @@
 """Best Days component."""
 
+import pandas as pd
 import streamlit as st
 
 from src.model import AnalysisResult
@@ -19,11 +20,12 @@ def best_days(result: AnalysisResult) -> None:
         if not best_days_list:
             st.write("Not enough data to show top 5 days.")
         else:
-            for day in best_days_list:
-                hours, remainder = divmod(day["timeSeconds"], 3600)
-                minutes, seconds = divmod(remainder, 60)
-                time_str = (
-                    f"{int(hours):02d} hours {int(minutes):02d} minutes "
-                    f"{int(seconds):02d} seconds"
-                )
-                st.write(f"**{day['date']}**: {time_str}")
+            df = pd.DataFrame(best_days_list)
+            df["time_spent"] = df["timeSeconds"].apply(
+                lambda x: (f"{int(x // 3600):02d} hours {int((x % 3600) // 60):02d} "
+                           f"minutes {int(x % 60):02d} seconds"),
+            )
+            df["Time in Minutes"] = (df["timeSeconds"] / 60).round(2)
+            df = df.rename(columns={"date": "Day", "time_spent": "Time Spent"})
+            df = df[["Day", "Time Spent", "Time in Minutes"]]
+            st.dataframe(df, hide_index=True)
