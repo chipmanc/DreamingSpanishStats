@@ -94,6 +94,12 @@ def load_data(token: str) -> AnalysisResult | None:
     # Drop UserId (unnecessary for our case)
     df = df.drop(columns=["userId"])
 
+    # Handle duplicate dates by aggregating the data
+    df = df.groupby("date").agg({
+        "timeSeconds": "sum",  # Sum the time if there are duplicates
+        "goalReached": "any",   # True if any of the duplicates reached goal
+    }).reset_index()
+
     # Create a complete date range
     df = df.set_index("date").asfreq("D").reset_index()
     df = df.rename(columns={"index": "date"})
