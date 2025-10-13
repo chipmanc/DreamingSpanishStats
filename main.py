@@ -29,10 +29,11 @@ st.set_page_config(page_title="Dreaming Spanish Time Tracker", layout="wide")
 title = "Dreaming Spanish Stats"
 subheader = "Analyze your viewing habits and predict your progress"
 
-if st.context.url.startswith("https://ds-stats-dev."):
-    title += " - :orange[Dev Build]"
-elif not st.context.url.startswith("https://ds-stats."):
-    title += " - :violet[Local Build]"
+# todo: temp removed as streamlit seems to silently err on deployment with this, but still runs fine
+# if st.context.url.startswith("https://ds-stats-dev."):
+#     title += " - :orange[Dev Build]"
+# elif not st.context.url.startswith("https://ds-stats."):
+#     title += " - :violet[Local Build]"
 
 st.title(title)
 st.subheader(subheader)
