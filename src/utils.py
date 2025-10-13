@@ -24,7 +24,7 @@ def fetch_ds_data(token: str) -> dict | None:
                       otherwise None.
 
     """
-    url = "https://www.dreamingspanish.com/.netlify/functions/dayWatchedTime"
+    url = "https://app.dreaming.com/.netlify/functions/dayWatchedTime"
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
@@ -51,7 +51,7 @@ def get_initial_time(token: str) -> int | None:
                      otherwise None.
 
     """
-    url = "https://www.dreamingspanish.com/.netlify/functions/externalTime"
+    url = "https://app.dreaming.com/.netlify/functions/externalTime"
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
@@ -75,7 +75,7 @@ def get_user_info(token: str) -> UserInfo | None:
         token (str): The bearer token for API authentication
 
     """
-    url = "https://www.dreamingspanish.com/.netlify/functions/user"
+    url = "https://app.dreaming.com/.netlify/functions/user"
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
@@ -116,9 +116,6 @@ def load_data(token: str) -> AnalysisResult | None:
     df = pd.DataFrame(api_data)
     df["date"] = pd.to_datetime(df["date"])
 
-    # Drop UserId (unnecessary for our case)
-    df = df.drop(columns=["userId"])
-
     # Create a complete date range
     df = df.set_index("date").asfreq("D").reset_index()
     df = df.rename(columns={"index": "date"})
@@ -137,13 +134,15 @@ def load_data(token: str) -> AnalysisResult | None:
 
     # Calculate current goal streak
     df["goal_streak_group"] = (~df["goalReached"]).cumsum()
-    df["current_goal_streak"] = df.groupby("goal_streak_group")["goalReached"].cumsum()
+    df["current_goal_streak"] = df.groupby("goal_streak_group")[
+        "goalReached"].cumsum()
     current_goal_streak = (
         df["current_goal_streak"].iloc[-1] if df["goalReached"].iloc[-1] else 0
     )
 
     # Calculate longest goal streak
-    goal_streak_lengths = df[df["goalReached"]].groupby("goal_streak_group").size()
+    goal_streak_lengths = df[df["goalReached"]
+                             ].groupby("goal_streak_group").size()
     longest_goal_streak = (
         goal_streak_lengths.max() if not goal_streak_lengths.empty else 0
     )
@@ -202,7 +201,8 @@ def generate_future_predictions(
     future_df = pd.DataFrame({"date": future_dates, "seconds": future_seconds})
 
     # Calculate cumulative values
-    future_df["cumulative_seconds"] = future_seconds.cumsum() + last_cumulative_seconds
+    future_df["cumulative_seconds"] = future_seconds.cumsum() + \
+        last_cumulative_seconds
     future_df["cumulative_minutes"] = future_df["cumulative_seconds"] / 60
     future_df["cumulative_hours"] = future_df["cumulative_minutes"] / 60
 
@@ -252,7 +252,8 @@ def get_best_days(analysis_result: AnalysisResult, num_days: int = 5) -> list[di
         best_days_list.append(
             {
                 "date": row["date"].strftime("%b %d, %Y"),
-                "timeSeconds": int(row["timeSeconds"]),  # Ensure integer for display
+                # Ensure integer for display
+                "timeSeconds": int(row["timeSeconds"]),
             },
         )
     return best_days_list
