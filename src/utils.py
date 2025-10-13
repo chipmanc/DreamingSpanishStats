@@ -10,7 +10,7 @@ import httpx
 import pandas as pd
 import streamlit as st
 
-from src.model import AnalysisResult
+from src.model import AnalysisResult, UserInfo
 
 
 def fetch_ds_data(token: str) -> dict | None:
@@ -24,7 +24,7 @@ def fetch_ds_data(token: str) -> dict | None:
                       otherwise None.
 
     """
-    url = "https://www.dreamingspanish.com/.netlify/functions/dayWatchedTime"
+    url = "https://app.dreaming.com/.netlify/functions/dayWatchedTime"
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
@@ -51,7 +51,7 @@ def get_initial_time(token: str) -> int | None:
                      otherwise None.
 
     """
-    url = "https://www.dreamingspanish.com/.netlify/functions/externalTime"
+    url = "https://app.dreaming.com/.netlify/functions/externalTime"
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
@@ -62,6 +62,31 @@ def get_initial_time(token: str) -> int | None:
     except Exception as e:  # noqa: BLE001
         st.error(f"Error fetching initial time: {e!s}")
         return None
+
+
+def get_user_info(token: str) -> UserInfo | None:
+    """Fetch the user info from the Dreaming Spanish API.
+
+    This function uses the API call to fetch information about the user.
+    This information includes things like the daily goal, profile info,
+    and a few hidden flags.
+
+    Args:
+        token (str): The bearer token for API authentication
+
+    """
+    url = "https://app.dreaming.com/.netlify/functions/user"
+    headers = {"Authorization": f"Bearer {token}"}
+
+    try:
+        response = httpx.get(url, headers=headers)
+        response.raise_for_status()
+
+        return UserInfo(daily_goal_seconds=response.json()["user"]["dailyGoalSeconds"])
+
+    except Exception as e:  # noqa: BLE001
+        st.error(f"Error fetching profile data: {e!s}")
+        return UserInfo(daily_goal_seconds=0)
 
 
 def load_data(token: str) -> AnalysisResult | None:
@@ -90,9 +115,6 @@ def load_data(token: str) -> AnalysisResult | None:
     # Convert API data to DataFrame
     df = pd.DataFrame(api_data)
     df["date"] = pd.to_datetime(df["date"])
-
-    # Drop UserId (unnecessary for our case)
-    df = df.drop(columns=["userId"])
 
     # Create a complete date range
     df = df.set_index("date").asfreq("D").reset_index()
@@ -135,7 +157,9 @@ def load_data(token: str) -> AnalysisResult | None:
 
 
 def generate_future_predictions(
-    df: pd.DataFrame, avg_seconds_per_day: float, target_hours: float,
+    df: pd.DataFrame,
+    avg_seconds_per_day: float,
+    target_hours: float,
 ) -> pd.DataFrame:
     """Generate future predictions based on historical data.
 
@@ -168,7 +192,9 @@ def generate_future_predictions(
 
     # Generate enough days to reach target
     future_dates = pd.date_range(
-        start=last_date + timedelta(days=1), periods=days_needed, freq="D",
+        start=last_date + timedelta(days=1),
+        periods=days_needed,
+        freq="D",
     )
 
     future_seconds = pd.Series([avg_seconds_per_day] * len(future_dates))
@@ -196,3 +222,38 @@ def generate_future_predictions(
 
     # Combine last historical point with future predictions
     return pd.concat([last_point, future_df], ignore_index=True)
+
+
+def get_best_days(analysis_result: AnalysisResult, num_days: int = 5) -> list[dict]:
+    """Identify and return the top N days with the most time spent.
+
+    Args:
+        analysis_result (AnalysisResult): The analysis result object.
+        num_days (int): The number of top days to retrieve.
+
+    Returns:
+        list[dict]: A list of dictionaries, each representing a best day
+                    with 'date' and 'timeSeconds'.
+                    Returns an empty list if not enough data.
+
+    """
+    if analysis_result.df.empty or len(analysis_result.df) < num_days:
+        return []  # Indicate not enough data
+
+    # Sort by timeSeconds in descending order and get the top N
+    best_days_df = analysis_result.df.sort_values(
+        by="timeSeconds",
+        ascending=False,
+    ).head(num_days)
+
+    # Convert to a list of dictionaries for easier display
+    best_days_list = []
+    for _, row in best_days_df.iterrows():
+        best_days_list.append(
+            {
+                "date": row["date"].strftime("%b %d, %Y"),
+                # Ensure integer for display
+                "timeSeconds": int(row["timeSeconds"]),
+            },
+        )
+    return best_days_list
