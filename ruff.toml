@@ -1,1 +1,2 @@
 select = ["ALL"]
+ignore = ["FIX002", "TD003", "TD006"]
